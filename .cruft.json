@@ -7,7 +7,7 @@
       "name": "solution-backup",
       "slug": "solution-backup",
       "parameter_key": "solution_backup",
-      "test_cases": "defaults",
+      "test_cases": "defaults override-schedules",
       "add_lib": "n",
       "add_pp": "n",
       "add_golden": "y",
