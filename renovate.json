@@ -5,7 +5,9 @@
     ":disableDependencyDashboard"
   ],
   "ignorePaths": [
-    ".github/**"
+    ".github/workflows/auto-release.yaml",
+    ".github/workflows/release.yaml",
+    ".github/workflows/test.yaml"
   ],
   "labels": [
     "dependency"
@@ -22,6 +24,19 @@
   },
   "suppressNotifications": [
     "artifactErrors"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "fileMatch": [
+        "^\\.github/workflows/espejote\\.ya?ml$"
+      ],
+      "matchStrings": [
+        "ESPEJOTE_VERSION:\\s*(?<currentValue>v?[0-9.]+)"
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "vshn/espejote"
+    }
   ],
   "packageRules": [
     {

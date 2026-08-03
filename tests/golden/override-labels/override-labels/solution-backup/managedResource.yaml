@@ -1,0 +1,108 @@
+apiVersion: espejote.io/v1alpha1
+kind: ManagedResource
+metadata:
+  name: pvc-backup-e5344851
+  namespace: override-labels
+spec:
+  context:
+    - name: backup_namespaces
+      resource:
+        apiVersion: v1
+        kind: Namespace
+        labelSelector:
+          matchLabels:
+            acme.io/backup-enabled: 'yes'
+        namespace: ''
+  serviceAccountRef:
+    name: solution-backup-manager
+  template: |
+    local esp = import 'espejote.libsonnet';
+
+    local inDelete(obj) = std.get(obj.metadata, 'deletionTimestamp', '') != '';
+    local wantsBackup(ns) =
+      local labels = std.get(ns.metadata, 'labels', {});
+      !inDelete(ns)
+      && std.get(labels, 'acme.io/backup-enabled', 'false') == 'yes'
+      && std.objectHas(labels, 'acme.io/backup-encryption-secret');
+
+    local managedBy = { 'espejote.io/managed-by': 'override-labels.pvc-backup-e5344851' };
+    local credsSecretName = 'backup-bucket-creds-e5344851';
+    local bucketNamePrefix = 'pvc-backup-e5344851-';
+
+    local encryptionSecretName(ns) =
+      std.get(ns.metadata, 'labels', {})['acme.io/backup-encryption-secret'];
+
+    local nsSlug(ns) = std.substr(std.sha256(ns.metadata.name), 0, 8);
+
+    local makeObjectBucket(ns) = {
+      apiVersion: 'appcat.vshn.io/v1',
+      kind: 'ObjectBucket',
+      metadata: {
+       name: 'pvc-backup-e5344851',
+       namespace: ns.metadata.name,
+       labels: managedBy
+      },
+      spec: {
+        parameters: {
+          bucketName: bucketNamePrefix + nsSlug(ns),
+          region: 'ch-dk-2'
+        },
+        writeConnectionSecretToRef: {
+          name: credsSecretName
+        },
+      },
+    };
+
+    local makeSchedule(ns) = {
+      apiVersion: 'k8up.io/v1',
+      kind: 'Schedule',
+      metadata: {
+        name: 'pvc-backup-e5344851',
+        namespace: ns.metadata.name,
+        labels: managedBy
+      },
+      spec: {
+        backend: {
+          repoPasswordSecretRef: {
+            name: encryptionSecretName(ns),
+            key: 'password'
+          },
+          s3: {
+            endpoint: 'https://sos-ch-dk-2.exo.io',
+            bucket: bucketNamePrefix + nsSlug(ns),
+            accessKeyIDSecretRef: {
+              name: credsSecretName,
+              key: 'AWS_ACCESS_KEY_ID'
+            },
+            secretAccessKeySecretRef: {
+              name: credsSecretName,
+              key: 'AWS_SECRET_ACCESS_KEY'
+            },
+          },
+        },
+        backup: { schedule: '0 1 * * *' },
+        check: { schedule: '0 3 * * *' },
+        prune: { schedule: '0 4 * * *', retention: {
+      "keepDaily": 3,
+      "keepMonthly": 1,
+      "keepWeekly": 2
+    } },
+      },
+    };
+
+    local manageNs(ns) = [ makeObjectBucket(ns), makeSchedule(ns) ];
+
+    local tn = esp.triggerName();
+    if tn == 'namespace' then (
+      local ns = esp.triggerData().resource;
+      if ns != null && wantsBackup(ns) then manageNs(ns) else []
+    ) else [
+      obj
+      for ns in esp.context().backup_namespaces
+      if wantsBackup(ns)
+      for obj in manageNs(ns)
+    ]
+  triggers:
+    - name: namespace
+      watchContextResource:
+        name: backup_namespaces

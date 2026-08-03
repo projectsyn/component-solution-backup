@@ -1,0 +1,46 @@
+---
+# Trigger: {"TriggerName":"namespace","WatchResource":{"apiVersion":"v1","kind":"Namespace","name":"test-app"}}
+- apiVersion: appcat.vshn.io/v1
+  kind: ObjectBucket
+  metadata:
+    labels:
+      espejote.io/managed-by: defaults.pvc-backup-0f37e81d
+    name: pvc-backup-0f37e81d
+    namespace: test-app
+  spec:
+    parameters:
+      bucketName: pvc-backup-0f37e81d-b58b0cb4
+      region: rma
+    writeConnectionSecretToRef:
+      name: backup-bucket-creds-0f37e81d
+- apiVersion: k8up.io/v1
+  kind: Schedule
+  metadata:
+    labels:
+      espejote.io/managed-by: defaults.pvc-backup-0f37e81d
+    name: pvc-backup-0f37e81d
+    namespace: test-app
+  spec:
+    backend:
+      repoPasswordSecretRef:
+        key: password
+        name: backup-encryption
+      s3:
+        accessKeyIDSecretRef:
+          key: AWS_ACCESS_KEY_ID
+          name: backup-bucket-creds-0f37e81d
+        bucket: pvc-backup-0f37e81d-b58b0cb4
+        endpoint: https://objects.rma.cloudscale.ch
+        secretAccessKeySecretRef:
+          key: AWS_SECRET_ACCESS_KEY
+          name: backup-bucket-creds-0f37e81d
+    backup:
+      schedule: 0 1 * * *
+    check:
+      schedule: 0 3 * * *
+    prune:
+      retention:
+        keepDaily: 3
+        keepMonthly: 1
+        keepWeekly: 2
+      schedule: 0 4 * * *

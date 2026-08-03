@@ -1,3 +1,9 @@
-# Overwrite parameters here
-
-# parameters: {...}
+parameters:
+  solution_backup:
+    schedule:
+      backup: "0 2 * * *"
+      check: "0 4 * * 6"
+      prune: "0 6 * * 0"
+      retention:
+        keepLast: 14
+        keepDaily: 7

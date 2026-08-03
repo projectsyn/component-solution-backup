@@ -1,0 +1,20 @@
+# Scenario labeled-general — general reconciliation, one namespace `test-app`
+# opted in via `vshn.ch/solution-base-backup=true` AND carrying the encryption
+# secret label `vshn.ch/solution-base-backup-encryption-secret: backup-encryption`
+# (the name of the restic repo-password Secret the user created in that ns).
+# Renders ObjectBucket + Schedule.
+triggers:
+  - {}
+context:
+  - name: backup_namespaces
+    resources:
+      - apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: test-app
+          labels:
+            vshn.ch/solution-base-backup: "true"
+            vshn.ch/solution-base-backup-encryption-secret: backup-encryption
+        status:
+          phase: Active
+libraries: {}

@@ -1,0 +1,12 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: override-labels:solution-backup-manager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: override-labels:solution-backup-manager
+subjects:
+  - kind: ServiceAccount
+    name: solution-backup-manager
+    namespace: override-labels

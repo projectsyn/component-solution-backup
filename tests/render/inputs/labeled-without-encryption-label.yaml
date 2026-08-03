@@ -1,0 +1,18 @@
+# Scenario labeled-without-encryption-label — general reconciliation, namespace
+# `test-app` opted in via the opt-in label but WITHOUT the encryption-secret
+# label. There is no default encryption-secret name, so `wantsBackup(ns)`
+# returns false and nothing is rendered for that namespace.
+triggers:
+  - {}
+context:
+  - name: backup_namespaces
+    resources:
+      - apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: test-app
+          labels:
+            vshn.ch/solution-base-backup: "true"
+        status:
+          phase: Active
+libraries: {}

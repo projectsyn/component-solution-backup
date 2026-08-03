@@ -2,4 +2,33 @@ parameters:
   solution_backup:
     =_metadata:
       multi_tenant: true
-    namespace: syn-solution-backup
+      multi_version: true
+      multi_instance: true
+    namespace: ${_instance}
+
+    createNamespace: true
+    namespaceAnnotations: {}
+    namespaceLabels: {}
+
+    backup_namespaces:
+      label: vshn.ch/solution-base-backup
+      value: "true"
+
+    backup_encryption_secret:
+      label: vshn.ch/solution-base-backup-encryption-secret
+
+    s3:
+      endpoint: https://objects.%(region)s.cloudscale.ch
+      region: rma
+
+    objectbucket:
+      name_prefix: pvc-backup-
+
+    schedule:
+      backup: "0 1 * * *"
+      check: "0 3 * * *"
+      prune: "0 4 * * *"
+      retention:
+        keepDaily: 3
+        keepWeekly: 2
+        keepMonthly: 1

@@ -1,0 +1,29 @@
+# Scenario labeled-trigger-namespace — `namespace` watch trigger fires for the
+# opted-in namespace `test-app` (opt-in + encryption-secret labels both present),
+# and the `backup_namespaces` context also lists it. Renders ObjectBucket +
+# Schedule for that namespace only.
+triggers:
+  - name: namespace
+    watchResource:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: test-app
+        labels:
+          vshn.ch/solution-base-backup: "true"
+          vshn.ch/solution-base-backup-encryption-secret: backup-encryption
+        status:
+          phase: Active
+context:
+  - name: backup_namespaces
+    resources:
+      - apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: test-app
+          labels:
+            vshn.ch/solution-base-backup: "true"
+            vshn.ch/solution-base-backup-encryption-secret: backup-encryption
+        status:
+          phase: Active
+libraries: {}

@@ -1,3 +1,10 @@
-# Overwrite parameters here
-
-# parameters: {...}
+parameters:
+  solution_backup:
+    backup_namespaces:
+      label: acme.io/backup-enabled
+      value: "yes"
+    backup_encryption_secret:
+      label: acme.io/backup-encryption-secret
+    s3:
+      endpoint: https://sos-%(region)s.exo.io
+      region: ch-dk-2

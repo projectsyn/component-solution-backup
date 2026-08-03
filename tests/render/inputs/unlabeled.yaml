@@ -1,0 +1,8 @@
+# Scenario unlabeled — general reconciliation, no namespace opted in
+# (empty backup_namespaces context). Renders nothing.
+triggers:
+  - {}
+context:
+  - name: backup_namespaces
+    resources: []
+libraries: {}

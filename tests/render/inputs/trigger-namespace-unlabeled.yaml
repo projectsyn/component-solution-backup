@@ -1,0 +1,17 @@
+# Scenario trigger-namespace-unlabeled — `namespace` watch trigger fires for a
+# namespace WITHOUT the opt-in label; backup_namespaces context is empty. The
+# `wantsBackup(ns)` guard returns false, so nothing is rendered.
+triggers:
+  - name: namespace
+    watchResource:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: test-app
+        labels: {}
+      status:
+        phase: Active
+context:
+  - name: backup_namespaces
+    resources: []
+libraries: {}

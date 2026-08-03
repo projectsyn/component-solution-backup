@@ -1,0 +1,3 @@
+---
+# Trigger: {"TriggerName":"namespace","WatchResource":{"apiVersion":"v1","kind":"Namespace","name":"test-app"}}
+[]
