@@ -6,14 +6,152 @@ The parent key for all of the following parameters is `solution_backup`.
 
 [horizontal]
 type:: string
-default:: `syn-solution-backup`
+default:: `${_instance}`
 
-The namespace in which to deploy this component.
+Namespace in which the component's own resources (including the espejote ManagedResource) are deployed. By default this is the Commodore instance name, so each instance deploys into its own namespace.
 
+== `createNamespace`
+
+[horizontal]
+type:: boolean
+default:: true
+
+If `true`, the component creates the `namespace` (with `namespaceAnnotations` and `namespaceLabels` applied). If `false`, the namespace must already exist.
+
+== `namespaceAnnotations`
+
+[horizontal]
+type:: map
+default:: `{}`
+
+Annotations added to the created `namespace`.
+
+== `namespaceLabels`
+
+[horizontal]
+type:: map
+default:: `{}`
+
+Labels added to the created `namespace`.
+
+== `backup_namespaces.label`
+
+[horizontal]
+type:: string
+default:: `vshn.ch/solution-base-backup`
+
+Namespace label key used to opt in namespaces for backups, and as the context label selector.
+
+== `backup_namespaces.value`
+
+[horizontal]
+type:: string
+default:: `"true"`
+
+Required value of the `backup_namespaces.label` label for a namespace to be opted in.
+
+== `backup_encryption_secret.label`
+
+[horizontal]
+type:: string
+default:: `vshn.ch/solution-base-backup-encryption-secret`
+
+Namespace label key whose value names the Secret in the target namespace that holds the restic repository password under the key `password`. There is no default Secret name; a namespace without this label is not backed up.
+
+== `s3.endpoint`
+
+[horizontal]
+type:: string
+default:: `https://objects.%(region)s.cloudscale.ch`
+
+S3-compatible endpoint for the backup bucket. The `%(region)s` placeholder is substituted from `s3.region`.
+
+== `s3.region`
+
+[horizontal]
+type:: string
+default:: `rma`
+
+Region substituted into the `s3.endpoint` placeholder. With the defaults this resolves to `https://objects.rma.cloudscale.ch`.
+
+== `objectbucket.name_prefix`
+
+[horizontal]
+type:: string
+default:: `pvc-backup-`
+
+Prefix for the generated S3 bucket names.
+
+== `schedule.backup`
+
+[horizontal]
+type:: string
+default:: `0 1 * * *`
+
+Cron schedule for k8up backup jobs.
+
+== `schedule.check`
+
+[horizontal]
+type:: string
+default:: `0 3 * * *`
+
+Cron schedule for k8up restic consistency checks.
+
+== `schedule.prune`
+
+[horizontal]
+type:: string
+default:: `0 4 * * *`
+
+Cron schedule for k8up prune jobs.
+
+== `schedule.retention.keepDaily`
+
+[horizontal]
+type:: integer
+default:: 3
+
+Number of daily snapshots to keep.
+
+== `schedule.retention.keepWeekly`
+
+[horizontal]
+type:: integer
+default:: 2
+
+Number of weekly snapshots to keep.
+
+== `schedule.retention.keepMonthly`
+
+[horizontal]
+type:: integer
+default:: 1
+
+Number of monthly snapshots to keep.
 
 == Example
 
 [source,yaml]
 ----
-namespace: example-namespace
+parameters:
+  solution_backup:
+    namespace: solution-backup
+    createNamespace: true
+    backup_namespaces:
+      label: vshn.ch/solution-base-backup
+      value: "true"
+    s3:
+      endpoint: https://objects.%(region)s.cloudscale.ch
+      region: rma
+    objectbucket:
+      name_prefix: pvc-backup-
+    schedule:
+      backup: "0 1 * * *"
+      check: "0 3 * * *"
+      prune: "0 4 * * *"
+      retention:
+        keepDaily: 3
+        keepWeekly: 2
+        keepMonthly: 1
 ----

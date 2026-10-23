@@ -1,5 +1,32 @@
 = solution-backup
 
-solution-backup is a Commodore component to manage solution-backup.
+solution-backup is a Commodore component that sets up per-namespace backups of persistent volume claims (PVCs) using link:https://k8up.io[k8up], backed by S3-compatible object storage provisioned through AppCat ObjectBucket resources.
 
-See the xref:references/parameters.adoc[parameters] reference for further details.
+Instead of configuring each backup by hand, you opt in individual namespaces with labels. The component uses link:https://espejote.vshn.net[espejote] to watch namespaces and, for every opted-in namespace, renders an ObjectBucket claim and a k8up Schedule that back up the namespace's PVCs to a dedicated S3 bucket.
+
+== What the component creates
+
+For each instance the component creates:
+
+* An Argo CD Application that deploys the generated resources (synchronized with `ServerSideApply=true`).
+* Optionally, a Namespace to hold the component's own resources (enabled by default).
+* A ServiceAccount `solution-backup-manager` with a ClusterRole and ClusterRoleBinding allowing it to read namespaces and manage ObjectBucket and k8up Schedule resources.
+* An espejote ManagedResource that reacts to namespace opt-in and renders, per opted-in namespace:
+  * An AppCat ObjectBucket (which provisions the S3 bucket and stores access credentials in a Secret).
+  * A k8up Schedule with backup, check, and prune jobs.
+
+See xref:explanations/how-it-works.adoc[How it works] for the generated resources' names and details.
+
+== Prerequisites
+
+* The cluster provides the AppCat `ObjectBucket` CRD (`appcat.vshn.io/v1`) and can provision S3-compatible storage.
+* k8up and espejote are installed in the cluster.
+* The S3 endpoint (by default `https://objects.<region>.cloudscale.ch`) is reachable from the cluster.
+* A Secret holding the restic repository password under the key `password` exists in each backed-up namespace, referenced by label.
+
+== Usage
+
+* xref:how-tos/enable-backups.adoc[Enable backups] — opt in namespaces and verify the generated resources.
+* xref:how-tos/customize-backups.adoc[Customize backups] — adjust schedules, retention, storage settings, and more.
+* xref:explanations/how-it-works.adoc[How it works] — the reconciliation model and naming scheme.
+* xref:references/parameters.adoc[Parameters] — the full parameter reference.

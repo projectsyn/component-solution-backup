@@ -1,0 +1,65 @@
+= Enable backups
+
+This page explains how to opt in a namespace for PVC backups and how to verify the generated resources.
+
+Both of the following labels are required on the namespace. Without both, nothing is rendered.
+
+* `vshn.ch/solution-base-backup: "true"` — the opt-in flag.
+* `vshn.ch/solution-base-backup-encryption-secret` — its value is the name of a Secret in the namespace holding the restic repository password under the key `password`. There is no default value for this Secret's name.
+
+== Prerequisites
+
+* The component is deployed in the cluster (see xref:index.adoc[solution-backup] for prerequisites).
+* You have cluster access to label namespaces and create Secrets.
+
+== Steps
+
+. Ensure the encryption Secret exists in the target namespace. If it does not exist yet, create one with the restic repository password:
+
+[source,terminal]
+----
+kubectl create secret generic backup-encryption \
+  --namespace test-app \
+  --from-literal=password='<restic-repository-password>'
+----
+
+. Opt in the namespace by applying both labels:
+
+[source,terminal]
+----
+kubectl label namespace test-app \
+  vshn.ch/solution-base-backup="true" \
+  vshn.ch/solution-base-backup-encryption-secret=backup-encryption
+----
+
+You may use any Secret name; it must match the label's value and contain the key `password`.
+
+== What happens next
+
+On the next reconciliation the component renders the following resources in the target namespace `test-app`:
+
+* An AppCat ObjectBucket `pvc-backup-<instanceSlug>` which provisions the S3 bucket and writes the S3 credentials into the Secret `backup-bucket-creds-<instanceSlug>`.
+* A k8up Schedule `pvc-backup-<instanceSlug>` that backs up the namespace's PVCs to the bucket, referencing the encryption Secret from the label.
+
+Verify with:
+
+[source,terminal]
+----
+kubectl -n test-app get objectbucket,schedule
+kubectl -n test-app get secret backup-bucket-creds-<instanceSlug>
+----
+
+== Removing backups
+
+To stop backing up a namespace, remove either label:
+
+[source,terminal]
+----
+kubectl label namespace test-app \
+  vshn.ch/solution-base-backup- \
+  vshn.ch/solution-base-backup-encryption-secret-
+----
+
+Alternatively, deleting the namespace also stops the backups. On the next reconciliation, the generated ObjectBucket and Schedule for that namespace are removed.
+
+Note that removing a single one of the two labels is sufficient — the generated pair (ObjectBucket and Schedule) is managed as one.

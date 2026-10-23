@@ -1,0 +1,68 @@
+= How it works
+
+The component's core is a single espejote ManagedResource that watches namespaces and renders two resources (an AppCat ObjectBucket and a k8up Schedule) for every namespace that opts in to backups.
+
+== Reconciliation model
+
+The ManagedResource `pvc-backup-<instanceSlug>` lives in the component's namespace (xref:references/parameters.adoc[`namespace`], by default the instance name) and defines:
+
+* A *context* named `backup_namespaces`: the list of cluster Namespaces matching the label selector `vshn.ch/solution-base-backup: "true"`.
+* A *trigger* named `namespace` with `watchContextResource` pointing at that context: whenever a namespace in the context changes (label added, removed, updated, or namespace deleted), the template runs again.
+
+When the trigger fires for a specific namespace event, only that namespace is evaluated — the render is quick and per-namespace. During a general (non-namespace-triggered) reconciliation, the template iterates over all namespaces in the `backup_namespaces` context.
+
+== The wantsBackup guard
+
+For each candidate namespace the template checks:
+
+* The namespace is not being deleted (no deletion timestamp).
+* The opt-in label value equals the expected value (`true` by default).
+* *And* the encryption-secret label is present — its value names the Secret in the namespace holding the restic repository password under the key `password`. There is no default Secret name.
+
+All three conditions must hold. A namespace carrying only the opt-in label is silently skipped — nothing is rendered for it. This is why xref:how-tos/enable-backups.adoc[enabling backups] requires both labels.
+
+== Naming scheme
+
+|===
+|Resource |Name
+
+|espejote ManagedResource
+|`pvc-backup-<instanceSlug>` in the component namespace
+
+|espejote managed-by label
+|`espejote.io/managed-by: <namespace>.pvc-backup-<instanceSlug>`
+
+|Per-namespace ObjectBucket and k8up Schedule
+|`pvc-backup-<instanceSlug>` in the target namespace
+
+|S3 bucket
+|`<name_prefix><instanceSlug>-<namespaceSlug>`
+
+|S3 credentials Secret
+|`backup-bucket-creds-<instanceSlug>` in the target namespace
+|===
+
+== Slugs
+
+The instance slug is the first 8 hex characters of the SHA-256 hash of the instance name. The namespace slug is the first 8 hex characters of the SHA-256 hash of the target namespace's name. Example: for instance `defaults`, the slug is `0f37e81d`, so a namespace `test-app` gets bucket name `pvc-backup-0f37e81d-<test-app-slug>`.
+
+Slugs keep resource names deterministic and within DNS label length limits regardless of how long instance or namespace names are.
+
+== Endpoint resolution
+
+`s3.endpoint` is a template: the `%(region)s` placeholder is substituted with `s3.region`. The default `https://objects.%(region)s.cloudscale.ch` with region `rma` resolves to `https://objects.rma.cloudscale.ch`. The resolved endpoint is baked into each generated k8up Schedule's backend configuration.
+
+== Rendering outcome
+
+For each namespace passing the guard the template renders, both in the target namespace:
+
+* An AppCat ObjectBucket (`appcat.vshn.io/v1`) named `pvc-backup-<instanceSlug>` with bucket name `<name_prefix><instanceSlug>-<namespaceSlug>` and region, writing S3 credentials to `backup-bucket-creds-<instanceSlug>` (keys `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`).
+* A k8up Schedule (`k8up.io/v1`) with the same name, referencing the credentials Secret and the encryption Secret (from the label, key `password`) in its backend, plus the configured backup/check/prune schedules and retention.
+
+== Argo CD integration
+
+component/app.jsonnet creates the Argo CD Application for this component via the standard Kubernetes application library, with the sync option `ServerSideApply=true` so large generated manifests apply reliably.
+
+== Teardown
+
+When a namespace stops backing up (either label removed, or namespace deleted), `wantsBackup` no longer holds and the ObjectBucket and Schedule pair drops out of the rendered output. Espejote prunes resources it previously managed but no longer render, so the pair is removed on the next reconciliation. The component's own resources (namespace, ServiceAccount, ClusterRole/Binding, ManagedResource) stay until the component instance is removed.

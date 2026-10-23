@@ -1,0 +1,66 @@
+= Customize backups
+
+Override the parameters of the `solution_backup` component to adjust schedules, retention, and storage settings. This page shows common overrides; see xref:references/parameters.adoc[Parameters] for the full reference.
+
+All examples are inventory fragments: they live under `parameters:` with the parent key `solution_backup`, in a Commodore hierarchy hierarchy file (`hierarchy.yml` entries or a class).
+
+== Adjust schedules and retention
+
+[k8up Schedule] structure of the generated Schedule:
+
+[source,yaml]
+----
+parameters:
+  solution_backup:
+    schedule:
+      backup: "0 1 * * *"
+      check: "0 3 * * *"
+      prune: "0 4 * * *"
+      retention:
+        keepDaily: 3
+        keepWeekly: 2
+        keepMonthly: 1
+----
+
+== Use a different S3 endpoint or region
+
+`s3.endpoint` supports the `%(region)s` placeholder, which is substituted from `s3.region`:
+
+[source,yaml]
+----
+parameters:
+  solution_backup:
+    s3:
+      endpoint: https://objects.%(region)s.cloudscale.ch
+      region: rma
+----
+
+The default resolves to `https://objects.rma.cloudscale.ch`.
+
+== Customize bucket names and namespace
+
+[source,yaml]
+----
+parameters:
+  solution_backup:
+    objectbucket:
+      name_prefix: my-backup-prefix-
+----
+
+== Namespace management
+
+By default the component creates and labels its own namespace. Adjust it like this:
+
+By default the component creates its own namespace and labels it. Disable namespace creation or add labels and annotations:
+
+[source,yaml]
+----
+parameters:
+  solution_backup:
+    namespace: my-backup-namespace
+    createNamespace: false
+    namespaceAnnotations:
+      example.com/owner: team-x
+    namespaceLabels:
+      example.com/tier: backup
+----
