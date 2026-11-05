@@ -1,2 +1,7 @@
 * xref:index.adoc[Home]
 * xref:references/parameters.adoc[Parameters]
+* How-to guides
+** xref:how-tos/enable-backups.adoc[Enable backups]
+** xref:how-tos/customize-backups.adoc[Customize backups]
+* Explanations
+** xref:explanations/how-it-works.adoc[How it works]
